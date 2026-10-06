@@ -39,7 +39,7 @@
               {% if e.acao_imediata %}<div><span class="badge text-bg-danger"><i class="bi bi-alarm"></i> Ação imediata</span></div>{% endif %}
               {% if e.revisado_manualmente %}<div><span class="badge text-bg-primary" title="Campos revisados: {{ e.campos_revisados|join:', ' }}"><i class="bi bi-person-check"></i> Revisado</span></div>{% endif %}
             </td>
-            <td>{% for c in e.cdas %}<div class="font-monospace">{{ c }}</div>{% empty %}—{% endfor %}</td>
+            <td>{% for c in e.cdas %}<div class="font-monospace text-nowrap">{{ c }}</div>{% empty %}—{% endfor %}</td>
             <td class="text-end text-nowrap">{{ e.valor_executado|moeda }}</td>
             <td>{% for b in e.bens_penhorados %}<div>• {{ b }}</div>{% empty %}—{% endfor %}</td>
             <td>{% for a in e.apropriacoes %}<div>• {{ a.descricao }}{% if a.protocolo_sefa %} <span class="badge text-bg-light border">SEFA {{ a.protocolo_sefa }}</span>{% else %} <span class="text-secondary">(protocolo SEFA não informado)</span>{% endif %}</div>{% empty %}—{% endfor %}</td>

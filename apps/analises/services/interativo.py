@@ -78,8 +78,9 @@ def formatar_esclarecimentos(perguntas: list[Pergunta], respostas: dict[str, str
     for pergunta in perguntas:
         resposta = respostas.get(pergunta.id, "").strip()[:LIMITE_RESPOSTA]
         referencia = f" ({pergunta.referencia})" if pergunta.referencia else ""
-        linhas.append(f"- Pergunta{referencia}: {pergunta.pergunta}")
+        # Dois espaços ao fim da linha = quebra de linha no Markdown.
+        linhas.append(f"- **Pergunta{referencia}:** {pergunta.pergunta}  ")
         linhas.append(
-            f"  Resposta do procurador: {resposta or 'Sem resposta (informação indisponível).'}"
+            f"  **Resposta do procurador:** {resposta or 'Sem resposta (informação indisponível).'}"
         )
     return prompts.CABECALHO_ESCLARECIMENTOS + "\n".join(linhas)

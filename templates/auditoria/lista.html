@@ -38,8 +38,12 @@
             <td><span class="badge {% if r.resultado == 'sucesso' %}text-bg-success{% elif r.resultado == 'recusado' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ r.get_resultado_display }}</span></td>
             <td class="font-monospace text-nowrap">{{ r.numero_processo|default:"—" }}</td>
             <td>{{ r.agente|default:"—" }}</td>
-            <td>{% if r.provedor %}{{ r.provedor }}{% if r.modelo %} / <span class="font-monospace">{{ r.modelo }}</span>{% endif %}{% else %}—{% endif %}</td>
-            <td class="text-secondary">{{ r.objeto }}{% if r.objeto and r.detalhe %} · {% endif %}{{ r.detalhe }}{% if r.ip %} · IP {{ r.ip }}{% endif %}</td>
+            <td class="text-nowrap">{% if r.provedor %}{{ r.provedor }}{% if r.modelo %} / <span class="font-monospace">{{ r.modelo }}</span>{% endif %}{% else %}—{% endif %}</td>
+            <td class="text-secondary">
+              {% if r.objeto %}<div>{{ r.objeto }}</div>{% endif %}
+              {% if r.detalhe %}<div>{{ r.detalhe }}</div>{% endif %}
+              {% if r.ip %}<div class="small">IP {{ r.ip }}</div>{% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr><td colspan="8" class="text-secondary p-3">Nenhum registro encontrado.</td></tr>
