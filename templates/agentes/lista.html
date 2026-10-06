@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}Agentes{% endblock %}
+{% block conteudo %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="titulo-pagina h3 mb-0">Agentes</h1>
+  <a href="{% url 'agentes:novo' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo agente</a>
+</div>
+<p class="text-secondary small">Cada agente combina um prompt de instruções com o provedor e o modelo que o executa. Os mesmos autos podem ser analisados por agentes diferentes.</p>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover table-fisco mb-0">
+      <thead><tr><th>Agente</th><th>Provedor / modelo</th><th>Modo interativo</th><th>Situação</th><th></th></tr></thead>
+      <tbody>
+        {% for agente in agentes %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ agente.nome }}{% if agente.interno %} <span class="badge text-bg-info">interno</span>{% endif %}</div>
+              <div class="small text-secondary">{{ agente.descricao }}</div>
+            </td>
+            <td class="text-nowrap">{{ agente.modelo }}
+              {% if not agente.modelo.provedor.disponivel %}<div><span class="badge text-bg-warning">provedor indisponível</span></div>{% endif %}
+            </td>
+            <td>{% if agente.modo_interativo %}<i class="bi bi-chat-square-dots text-primary"></i> Sim{% else %}Não{% endif %}</td>
+            <td>{% if agente.ativo %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-light border">Inativo</span>{% endif %}</td>
+            <td class="text-end"><a href="{% url 'agentes:editar' agente.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-secondary">Nenhum agente cadastrado. Execute <code>python manage.py seed_agentes</code>.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
