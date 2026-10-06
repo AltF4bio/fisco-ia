@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: Lint e testes
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: fisco
+          POSTGRES_USER: fisco
+          POSTGRES_PASSWORD: fisco
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fisco -d fisco"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://fisco:fisco@localhost:5432/fisco
+      # O CI usa apenas o MockProvider: nenhuma chave real de IA é necessária.
+      FISCO_MODO_DEMO: "True"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Ruff (formatação)
+        run: ruff format --check .
+
+      - name: Verificar migrações pendentes
+        run: python manage.py makemigrations --check --dry-run --settings=config.settings_test
+
+      - name: Testes com cobertura
+        run: pytest --cov --cov-report=term-missing --cov-report=xml
+
+  docker:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Construir imagem
+        run: docker build -t fisco-ia:ci .
