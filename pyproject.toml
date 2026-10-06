@@ -29,6 +29,7 @@ ignore = ["RUF001", "RUF002", "RUF003", "RUF012"]  # acentos em português e atr
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*.py" = ["DJ008"]
 "**/prompts.py" = ["E501"]  # textos de prompt preservados literalmente
+"scripts/gerar_pdfs_ficticios.py" = ["E501"]  # textos dos documentos fictícios
 
 [tool.ruff.format]
 quote-style = "double"
