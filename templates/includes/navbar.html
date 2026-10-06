@@ -12,6 +12,7 @@
         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'painel' %}active{% endif %}" href="{% url 'painel' %}">Painel</a></li>
         {% if eh_procurador %}
           <li class="nav-item"><a class="nav-link {% if rota == 'analises' %}active{% endif %}" href="{% url 'analises:nova' %}">Nova análise</a></li>
+          <li class="nav-item"><a class="nav-link {% if rota == 'empresas' %}active{% endif %}" href="{% url 'empresas:lista' %}">Empresas</a></li>
         {% endif %}
         {% if eh_administrador %}
           <li class="nav-item"><a class="nav-link {% if rota == 'contas' %}active{% endif %}" href="{% url 'contas:usuarios' %}">Usuários</a></li>
