@@ -1,6 +1,6 @@
 [project]
 name = "fisco-ia"
-version = "0.1.0"
+version = "1.0.0"
 description = "Protótipo de sistema com IA generativa multimodelo para análise de execuções fiscais — TCC Sistemas de Informação (UNIPAR 2026)"
 requires-python = ">=3.12"
 license = "MIT"
