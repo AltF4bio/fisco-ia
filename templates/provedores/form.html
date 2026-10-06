@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titulo %}Configurar provedor{% endblock %}
+{% block conteudo %}
+<h1 class="titulo-pagina h3 mb-3">Configurar: {{ provedor }}</h1>
+<div class="card" style="max-width: 640px;">
+  <div class="card-body">
+    {% if provedor.exige_chave %}
+      <p class="small mb-3">Chave atual: <span class="font-monospace">{{ provedor.chave_mascarada|default:"— não informada —" }}</span></p>
+    {% else %}
+      <p class="small text-secondary mb-3">O provedor de demonstração não usa chave de API e não realiza chamadas externas.</p>
+    {% endif %}
+    <form method="post" novalidate autocomplete="off">
+      {% csrf_token %}
+      {% include "includes/form_campos.html" %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="{% url 'provedores:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

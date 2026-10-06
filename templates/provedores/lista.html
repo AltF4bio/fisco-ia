@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titulo %}Provedores de IA{% endblock %}
+{% block conteudo %}
+<h1 class="titulo-pagina h3 mb-3">Provedores de IA</h1>
+
+<div class="alert alert-info d-flex gap-2" role="note">
+  <i class="bi bi-shield-check fs-5"></i>
+  <div>
+    <strong>Lembrete institucional (LGPD e CNJ 615/2025):</strong> o uso institucional pressupõe a contratação dos
+    provedores em condições que <strong>vedem o uso dos dados para treinamento</strong> de modelos e assegurem
+    <strong>confidencialidade</strong> das informações processuais. As chaves são armazenadas criptografadas e
+    nunca são exibidas por inteiro.
+  </div>
+</div>
+
+{% if MODO_DEMO %}
+  <div class="alert alert-warning small"><i class="bi bi-cone-striped"></i> O sistema está em <strong>modo demonstração</strong>: todas as chamadas são atendidas pelo MockProvider, mesmo para provedores configurados. Defina <code>FISCO_MODO_DEMO=False</code> para usar os provedores reais.</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for provedor in provedores %}
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>{{ provedor }}</span>
+          {% if provedor.disponivel %}<span class="badge text-bg-success">Ativo</span>
+          {% elif provedor.configurado %}<span class="badge text-bg-secondary">Inativo</span>
+          {% else %}<span class="badge text-bg-light border">Não configurado</span>{% endif %}
+        </div>
+        <div class="card-body">
+          <dl class="row small mb-2">
+            {% if provedor.exige_chave %}
+              <dt class="col-5">Chave de API</dt>
+              <dd class="col-7 font-monospace">{{ provedor.chave_mascarada|default:"— não informada —" }}</dd>
+            {% endif %}
+            <dt class="col-5">Último teste</dt>
+            <dd class="col-7" id="teste-{{ provedor.pk }}">
+              {% include "provedores/_resultado_teste.html" with sucesso=provedor.ultimo_teste_ok mensagem=provedor.ultimo_teste_mensagem %}
+            </dd>
+          </dl>
+          <div class="d-flex gap-2 mb-3">
+            <a href="{% url 'provedores:editar' provedor.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-gear"></i> Configurar</a>
+            <button class="btn btn-sm btn-outline-secondary" hx-post="{% url 'provedores:testar' provedor.pk %}" hx-target="#teste-{{ provedor.pk }}" {% if not provedor.configurado %}disabled{% endif %}>
+              <span class="ocultar-durante-envio"><i class="bi bi-plug"></i> Testar conexão</span>
+              <span class="htmx-indicator spinner-border spinner-border-sm"></span>
+            </button>
+          </div>
+          <h2 class="h6 fw-bold">Modelos disponíveis</h2>
+          <table class="table table-sm small mb-2">
+            <thead><tr><th>Modelo</th><th>Identificador</th><th class="text-end">Contexto</th><th></th></tr></thead>
+            <tbody>
+              {% for modelo in provedor.modelos.all %}
+                <tr class="{% if not modelo.ativo %}text-secondary{% endif %}">
+                  <td>{{ modelo.nome_exibicao }}{% if not modelo.ativo %} <span class="badge text-bg-light border">inativo</span>{% endif %}</td>
+                  <td class="font-monospace">{{ modelo.identificador }}</td>
+                  <td class="text-end">{{ modelo.limite_contexto_tokens|floatformat:"0g" }}</td>
+                  <td class="text-end"><a href="{% url 'provedores:modelo_editar' modelo.pk %}" class="btn btn-link btn-sm p-0" aria-label="Editar modelo"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-secondary">Nenhum modelo cadastrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <a href="{% url 'provedores:modelo_novo' provedor.pk %}" class="btn btn-sm btn-link px-0"><i class="bi bi-plus-circle"></i> Cadastrar modelo</a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

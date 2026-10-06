@@ -6,4 +6,5 @@ urlpatterns = [
     path("", PainelView.as_view(), name="painel"),
     path("saude/", saude, name="saude"),
     path("contas/", include("apps.contas.urls")),
+    path("provedores/", include("apps.provedores.urls")),
 ]
