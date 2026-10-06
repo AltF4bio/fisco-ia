@@ -1,0 +1,47 @@
+[project]
+name = "fisco-ia"
+version = "0.1.0"
+description = "Protótipo de sistema com IA generativa multimodelo para análise de execuções fiscais — TCC Sistemas de Informação (UNIPAR 2026)"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Fábio Luís Franco Filho" }]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/*.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "W",
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "DJ",  # flake8-django
+    "SIM", # simplify
+    "T20", # proíbe print() de depuração
+    "RUF",
+]
+ignore = ["RUF001", "RUF002", "RUF003", "RUF012"]  # acentos em português e atributos de classe do Django
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*.py" = ["DJ008"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings_test"
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+filterwarnings = ["ignore::DeprecationWarning:pdfminer.*"]
+
+[tool.coverage.run]
+source = ["apps", "config"]
+omit = ["*/migrations/*", "*/tests/*", "config/wsgi.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
