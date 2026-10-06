@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block titulo %}{{ empresa.razao_social }}{% endblock %}
+{% block conteudo %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="titulo-pagina h3 mb-1">{{ empresa.razao_social }}</h1>
+    <p class="text-secondary mb-0">CNPJ <span class="font-monospace">{{ empresa.cnpj_formatado }}</span></p>
+    {% if empresa.observacoes %}<p class="small mt-2 mb-0" style="max-width: 80ch;">{{ empresa.observacoes|linebreaksbr }}</p>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'empresas:editar' empresa.pk %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
+    <a href="{% url 'empresas:excluir' empresa.pk %}" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Excluir</a>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-upload"></i> Enviar PDFs de execuções fiscais desta empresa</div>
+  <div class="card-body">
+    <form method="post" action="{% url 'empresas:enviar' empresa.pk %}" enctype="multipart/form-data" class="row g-2 align-items-end" id="form-envio">
+      {% csrf_token %}
+      <div class="col-md-8">
+        <label class="form-label fw-semibold" for="{{ form_envio.arquivos.id_for_label }}">{{ form_envio.arquivos.label }}</label>
+        <input type="file" name="arquivos" id="{{ form_envio.arquivos.id_for_label }}" class="form-control" accept="application/pdf" multiple required>
+        <div class="form-text">{{ form_envio.arquivos.help_text }}</div>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary w-100" id="botao-envio">
+          <span class="rotulo"><i class="bi bi-magic"></i> Extrair e consolidar</span>
+          <span class="carregando d-none"><span class="spinner-border spinner-border-sm"></span> Processando…</span>
+        </button>
+      </div>
+    </form>
+    <p class="small text-secondary mb-0 mt-2">Um agente interno de extração estruturada lê cada PDF e cria ou atualiza a linha do processo (chave: número do processo). Campos corrigidos manualmente não são sobrescritos.</p>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+  <h2 class="h5 fw-bold mb-0" style="color: var(--fisco-azul);">Tabela consolidada de execuções</h2>
+</div>
+
+<form id="form-filtros" class="row g-2 align-items-end mb-3" hx-get="{% url 'empresas:detalhe' empresa.pk %}" hx-target="#tabela-execucoes" hx-trigger="change, keyup changed delay:400ms from:input[name=busca]" hx-push-url="true">
+  <div class="col-sm-4 col-lg-3">
+    <label class="form-label small mb-1" for="filtro-situacao">Situação</label>
+    <select name="situacao" id="filtro-situacao" class="form-select form-select-sm">
+      <option value="">Todas</option>
+      {% for valor, rotulo in situacoes %}<option value="{{ valor }}" {% if filtros.situacao == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-4 col-lg-3">
+    <label class="form-label small mb-1" for="filtro-busca">Número do processo</label>
+    <input type="search" name="busca" id="filtro-busca" value="{{ filtros.busca }}" class="form-control form-control-sm" placeholder="Buscar…">
+  </div>
+  <div class="col-sm-4 col-lg-3">
+    <div class="form-check mb-1">
+      <input class="form-check-input" type="checkbox" name="acao" value="1" id="filtro-acao" {% if filtros.somente_acao %}checked{% endif %}>
+      <label class="form-check-label small" for="filtro-acao">Somente ação imediata</label>
+    </div>
+  </div>
+</form>
+
+<div id="tabela-execucoes">
+  {% include "empresas/_tabela.html" %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById("form-envio").addEventListener("submit", function () {
+    const botao = document.getElementById("botao-envio");
+    botao.disabled = true;
+    botao.querySelector(".rotulo").classList.add("d-none");
+    botao.querySelector(".carregando").classList.remove("d-none");
+  });
+</script>
+{% endblock %}

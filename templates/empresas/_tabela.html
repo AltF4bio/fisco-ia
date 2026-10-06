@@ -1,0 +1,59 @@
+{% load fisco %}
+<input type="hidden" name="ordem" form="form-filtros" value="{{ filtros.ordem }}">
+<div class="row g-3 mb-3">
+  <div class="col-sm-4"><div class="card"><div class="card-body py-2"><div class="small text-secondary">Execuções</div><div class="fs-4 fw-bold">{{ totais.quantidade }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card"><div class="card-body py-2"><div class="small text-secondary">Valor executado somado</div><div class="fs-4 fw-bold">{{ totais.valor|moeda }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card {% if totais.acao_imediata %}border-danger{% endif %}"><div class="card-body py-2"><div class="small text-secondary">Demandam ação imediata</div><div class="fs-4 fw-bold {% if totais.acao_imediata %}text-danger{% endif %}">{{ totais.acao_imediata }}</div></div></div></div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+  {% include "includes/aviso_ia.html" %}
+  <div class="d-flex gap-2 ms-auto">
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'empresas:exportar' empresa.pk 'csv' %}?{{ query }}"><i class="bi bi-filetype-csv"></i> Exportar CSV</a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'empresas:exportar' empresa.pk 'pdf' %}?{{ query }}"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</a>
+  </div>
+</div>
+
+{% with ordem=filtros.ordem %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover table-fisco mb-0 small">
+      <thead>
+        <tr>
+          {% include "empresas/_th_ordenavel.html" with rotulo="Processo" campo="numero" %}
+          <th>CDA(s)</th>
+          {% include "empresas/_th_ordenavel.html" with rotulo="Valor executado" campo="valor" %}
+          <th>Bens penhorados</th>
+          <th>Apropriações (SEFA)</th>
+          <th>Teses de defesa</th>
+          {% include "empresas/_th_ordenavel.html" with rotulo="Situação" campo="situacao" %}
+          {% include "empresas/_th_ordenavel.html" with rotulo="Atualização" campo="atualizacao" %}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in execucoes %}
+          <tr class="{% if e.acao_imediata %}linha-acao-imediata{% endif %}">
+            <td class="text-nowrap">
+              <span class="font-monospace">{{ e.numero_processo }}</span>
+              {% if e.acao_imediata %}<div><span class="badge text-bg-danger"><i class="bi bi-alarm"></i> Ação imediata</span></div>{% endif %}
+              {% if e.revisado_manualmente %}<div><span class="badge text-bg-primary" title="Campos revisados: {{ e.campos_revisados|join:', ' }}"><i class="bi bi-person-check"></i> Revisado</span></div>{% endif %}
+            </td>
+            <td>{% for c in e.cdas %}<div class="font-monospace">{{ c }}</div>{% empty %}—{% endfor %}</td>
+            <td class="text-end text-nowrap">{{ e.valor_executado|moeda }}</td>
+            <td>{% for b in e.bens_penhorados %}<div>• {{ b }}</div>{% empty %}—{% endfor %}</td>
+            <td>{% for a in e.apropriacoes %}<div>• {{ a.descricao }}{% if a.protocolo_sefa %} <span class="badge text-bg-light border">SEFA {{ a.protocolo_sefa }}</span>{% else %} <span class="text-secondary">(protocolo SEFA não informado)</span>{% endif %}</div>{% empty %}—{% endfor %}</td>
+            <td>{% for t in e.teses_defesa %}<span class="badge text-bg-secondary me-1">{{ t }}</span>{% empty %}—{% endfor %}</td>
+            <td><strong>{{ e.get_situacao_display }}</strong>{% if e.situacao_detalhe %}<div class="text-secondary">{{ e.situacao_detalhe }}</div>{% endif %}</td>
+            <td class="text-nowrap">{{ e.ultima_atualizacao|date:"d/m/Y H:i" }}</td>
+            <td><a href="{% url 'empresas:revisar' e.pk %}" class="btn btn-sm btn-outline-primary" title="Revisar dados"><i class="bi bi-pencil-square"></i></a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9" class="text-secondary p-3">Nenhuma execução {% if filtros.situacao or filtros.busca or filtros.somente_acao %}para os filtros selecionados{% else %}cadastrada. Envie os PDFs das execuções acima{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endwith %}
+<p class="small text-secondary mt-2 mb-0"><i class="bi bi-info-circle"></i> Dados extraídos automaticamente pela IA a partir dos autos. A revisão humana prevalece: linhas com o selo <span class="badge text-bg-primary">Revisado</span> tiveram campos corrigidos pelo procurador.</p>

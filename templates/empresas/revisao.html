@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Revisar execução{% endblock %}
+{% block conteudo %}
+<h1 class="titulo-pagina h3 mb-1">Revisar execução fiscal</h1>
+<p class="text-secondary">{{ execucao.empresa }} · processo <span class="font-monospace">{{ execucao.numero_processo }}</span></p>
+<div class="alert alert-info small">
+  <i class="bi bi-person-check"></i> Os campos que você alterar serão marcados como <strong>revisados</strong> e
+  <strong>prevalecerão</strong> sobre futuras extrações automáticas do mesmo processo.
+  {% if execucao.campos_revisados %}<br>Já revisados: {{ execucao.campos_revisados|join:", " }}.{% endif %}
+</div>
+<div class="card" style="max-width: 860px;">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form_campos.html" %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar revisão</button>
+        <a href="{% url 'empresas:detalhe' execucao.empresa_id %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

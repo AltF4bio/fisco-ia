@@ -1,0 +1,7 @@
+<th scope="col">
+  {% if ordem == campo %}
+    <a href="?situacao={{ filtros.situacao }}&busca={{ filtros.busca|urlencode }}{% if filtros.somente_acao %}&acao=1{% endif %}&ordem=-{{ campo }}" hx-get="?situacao={{ filtros.situacao }}&busca={{ filtros.busca|urlencode }}{% if filtros.somente_acao %}&acao=1{% endif %}&ordem=-{{ campo }}" hx-target="#tabela-execucoes" hx-push-url="true">{{ rotulo }} <i class="bi bi-caret-up-fill"></i></a>
+  {% else %}
+    <a href="?situacao={{ filtros.situacao }}&busca={{ filtros.busca|urlencode }}{% if filtros.somente_acao %}&acao=1{% endif %}&ordem={{ campo }}" hx-get="?situacao={{ filtros.situacao }}&busca={{ filtros.busca|urlencode }}{% if filtros.somente_acao %}&acao=1{% endif %}&ordem={{ campo }}" hx-target="#tabela-execucoes" hx-push-url="true">{{ rotulo }}{% if ordem == "-"|add:campo %} <i class="bi bi-caret-down-fill"></i>{% endif %}</a>
+  {% endif %}
+</th>
