@@ -1,0 +1,4 @@
+-r requirements-dev.txt
+
+# Captura de telas e validação ponta a ponta (scripts/capturar_telas.py)
+playwright~=1.63.0
