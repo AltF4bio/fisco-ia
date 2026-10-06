@@ -135,6 +135,9 @@ CSRF_COOKIE_HTTPONLY = True
 # Uploads: PDFs nunca vão para MEDIA_ROOT. Arquivos grandes ficam em arquivo
 # temporário do Django, removido automaticamente ao fim da requisição.
 FISCO_PDF_MAX_MB = env("FISCO_PDF_MAX_MB")
+# Texto dos autos aguardando respostas do procurador (modo interativo): arquivo
+# temporário apagado após a análise ou por expiração. Nunca em MEDIA_ROOT.
+FISCO_TEMP_DIR = env("FISCO_TEMP_DIR", default=str(Path(tempfile.gettempdir()) / "fisco-ia-autos"))
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 

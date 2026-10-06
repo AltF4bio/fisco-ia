@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block titulo %}Nova análise{% endblock %}
+{% block conteudo %}
+<h1 class="titulo-pagina h3 mb-3">Nova análise de autos</h1>
+
+{% if recusa %}
+  <div class="alert alert-warning" role="alert">
+    <h2 class="h6 fw-bold"><i class="bi bi-slash-circle"></i> Documento fora do escopo</h2>
+    <p class="mb-1">{{ recusa.mensagem }}</p>
+    {% for detalhe in recusa.detalhes %}{% if detalhe %}<p class="small mb-0 text-secondary">Verificação: {{ detalhe }}</p>{% endif %}{% endfor %}
+  </div>
+{% endif %}
+{% if erro %}
+  <div class="alert alert-danger" role="alert"><i class="bi bi-x-octagon"></i> {{ erro.mensagem }}</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate id="form-analise">
+          {% csrf_token %}
+          {% include "includes/form_campos.html" %}
+          <button type="submit" class="btn btn-primary" id="botao-analisar">
+            <span class="rotulo"><i class="bi bi-cpu"></i> Analisar autos</span>
+            <span class="carregando d-none"><span class="spinner-border spinner-border-sm"></span> Analisando… isso pode levar alguns minutos</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-diagram-3"></i> Como funciona</div>
+      <div class="card-body small">
+        <ol class="ps-3 mb-2">
+          <li>O texto do PDF é extraído e recebe um <strong>índice de qualidade</strong>.</li>
+          <li>O sistema confirma que o documento é uma <strong>execução fiscal</strong>; outros documentos são recusados.</li>
+          <li>Se o agente estiver em <strong>modo interativo</strong>, você responde a perguntas sobre lacunas dos autos.</li>
+          <li>O agente produz a análise; autos extensos são processados em blocos (map-reduce).</li>
+        </ol>
+        <p class="mb-0 text-secondary">O sistema não acessa PJe/Projudi e não guarda credenciais de tribunais. O PDF e o texto extraído não são armazenados.</p>
+      </div>
+    </div>
+    {% if resultados %}
+      <div class="card">
+        <div class="card-header"><i class="bi bi-clock-history"></i> Análises desta sessão</div>
+        <ul class="list-group list-group-flush small">
+          {% for identificador, r in resultados %}
+            <li class="list-group-item">
+              <a href="{% url 'analises:resultado' identificador %}">{{ r.agente }}</a>
+              <span class="text-secondary">· {{ r.numero_processo|default:"processo não identificado" }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="card-footer small text-secondary">Os resultados ficam disponíveis apenas durante a sessão.</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById("form-analise").addEventListener("submit", function () {
+    const botao = document.getElementById("botao-analisar");
+    botao.disabled = true;
+    botao.querySelector(".rotulo").classList.add("d-none");
+    botao.querySelector(".carregando").classList.remove("d-none");
+  });
+</script>
+{% endblock %}

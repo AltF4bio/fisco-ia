@@ -28,6 +28,7 @@ services:
       FISCO_MODO_DEMO: ${FISCO_MODO_DEMO:-True}
       FISCO_SEED_DEMO: ${FISCO_SEED_DEMO:-False}
       FISCO_SESSION_CACHE_DIR: /tmp/fisco-ia-sessoes
+      FISCO_TEMP_DIR: /tmp/fisco-ia-autos
     volumes:
       - webdata:/data
     ports:
