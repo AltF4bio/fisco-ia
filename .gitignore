@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Django
+media/
+staticfiles/
+*.sqlite3
+db.sqlite3
+
+# Segredos e configuração local (nunca versionar)
+.env
+.env.*
+!.env.example
+
+# PDFs temporários e uploads locais
+tmp/
+*.tmp.pdf
+
+# Playwright
+.playwright/
+test-results/
+
+# VS Code (mantém apenas configurações compartilhadas do projeto)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
