@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block titulo %}{% if usuario_editado %}Editar usuário{% else %}Novo usuário{% endif %}{% endblock %}
+{% block conteudo %}
+<h1 class="titulo-pagina h3 mb-3">{% if usuario_editado %}Editar usuário: {{ usuario_editado.username }}{% else %}Novo usuário{% endif %}</h1>
+<div class="card" style="max-width: 640px;">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "includes/form_campos.html" %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="{% url 'contas:usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
