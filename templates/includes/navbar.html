@@ -18,6 +18,7 @@
           <li class="nav-item"><a class="nav-link {% if rota == 'contas' %}active{% endif %}" href="{% url 'contas:usuarios' %}">Usuários</a></li>
           <li class="nav-item"><a class="nav-link {% if rota == 'provedores' %}active{% endif %}" href="{% url 'provedores:lista' %}">Provedores</a></li>
           <li class="nav-item"><a class="nav-link {% if rota == 'agentes' %}active{% endif %}" href="{% url 'agentes:lista' %}">Agentes</a></li>
+          <li class="nav-item"><a class="nav-link {% if rota == 'auditoria' %}active{% endif %}" href="{% url 'auditoria:lista' %}">Auditoria</a></li>
         {% endif %}
       </ul>
       <div class="d-flex align-items-center gap-3 text-white-50 small">

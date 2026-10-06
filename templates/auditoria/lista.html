@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load fisco %}
+{% block titulo %}Auditoria{% endblock %}
+{% block conteudo %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h1 class="titulo-pagina h3 mb-1">Log de auditoria</h1>
+    <p class="text-secondary small mb-0"><i class="bi bi-lock"></i> Somente leitura. São registrados apenas metadados das operações — nunca o conteúdo dos autos ou das análises.</p>
+  </div>
+  <span class="text-secondary small">{{ paginator.count }} registro{{ paginator.count|pluralize }}</span>
+</div>
+
+<form method="get" class="card card-body mb-3">
+  <div class="row g-2 align-items-end">
+    {% for campo in form %}
+      <div class="col-sm-6 col-lg-2">
+        <label class="form-label small mb-1" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+        {{ campo|bootstrap }}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="d-flex gap-2 mt-2">
+    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+    <a href="{% url 'auditoria:lista' %}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover table-fisco mb-0 small">
+      <thead><tr><th>Data e hora</th><th>Usuário</th><th>Ação</th><th>Resultado</th><th>Processo</th><th>Agente</th><th>Provedor / modelo</th><th>Detalhes</th></tr></thead>
+      <tbody>
+        {% for r in registros %}
+          <tr>
+            <td class="text-nowrap">{{ r.criado_em|date:"d/m/Y H:i:s" }}</td>
+            <td>{{ r.usuario_nome|default:"—" }}</td>
+            <td>{{ r.get_acao_display }}</td>
+            <td><span class="badge {% if r.resultado == 'sucesso' %}text-bg-success{% elif r.resultado == 'recusado' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ r.get_resultado_display }}</span></td>
+            <td class="font-monospace text-nowrap">{{ r.numero_processo|default:"—" }}</td>
+            <td>{{ r.agente|default:"—" }}</td>
+            <td>{% if r.provedor %}{{ r.provedor }}{% if r.modelo %} / <span class="font-monospace">{{ r.modelo }}</span>{% endif %}{% else %}—{% endif %}</td>
+            <td class="text-secondary">{{ r.objeto }}{% if r.objeto and r.detalhe %} · {% endif %}{{ r.detalhe }}{% if r.ip %} · IP {{ r.ip }}{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="text-secondary p-3">Nenhum registro encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% if is_paginated %}
+  <nav class="mt-3" aria-label="Paginação">
+    <ul class="pagination pagination-sm">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{{ consulta }}&page={{ page_obj.previous_page_number }}">Anterior</a></li>{% endif %}
+      <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{{ consulta }}&page={{ page_obj.next_page_number }}">Próxima</a></li>{% endif %}
+    </ul>
+  </nav>
+{% endif %}
+{% endblock %}
