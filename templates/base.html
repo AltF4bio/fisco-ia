@@ -1,0 +1,29 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Painel{% endblock %} · FISCO.IA</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/fisco.css' %}">
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+{% block corpo %}
+  {% include "includes/navbar.html" %}
+  {% if MODO_DEMO %}
+    <div class="faixa-demo text-center py-1">
+      <i class="bi bi-cone-striped"></i> Modo demonstração: as respostas de IA são exemplos determinísticos (MockProvider), sem chamadas a provedores reais.
+    </div>
+  {% endif %}
+  <main class="container-xl py-4">
+    {% include "includes/mensagens.html" %}
+    {% block conteudo %}{% endblock %}
+  </main>
+  {% include "includes/rodape.html" %}
+{% endblock %}
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

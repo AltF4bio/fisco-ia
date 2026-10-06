@@ -90,7 +90,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LOGIN_URL = "contas:login"
-LOGIN_REDIRECT_URL = "core:painel"
+LOGIN_REDIRECT_URL = "painel"
 LOGOUT_REDIRECT_URL = "contas:login"
 
 LANGUAGE_CODE = "pt-br"

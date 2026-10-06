@@ -1,7 +1,9 @@
-from django.urls import path
+from django.urls import include, path
 
-from apps.core.views import saude
+from apps.core.views import PainelView, saude
 
 urlpatterns = [
+    path("", PainelView.as_view(), name="painel"),
     path("saude/", saude, name="saude"),
+    path("contas/", include("apps.contas.urls")),
 ]
