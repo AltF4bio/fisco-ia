@@ -5,3 +5,6 @@ class AuditoriaConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.auditoria"
     verbose_name = "Auditoria"
+
+    def ready(self) -> None:
+        from apps.auditoria import signals  # noqa: F401
