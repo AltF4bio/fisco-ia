@@ -10,6 +10,10 @@ pdfplumber~=0.11.10
 pypdf~=6.19.0
 reportlab~=5.0.1
 
+# Renderização segura do Markdown gerado pelos modelos
+Markdown~=3.11
+nh3~=0.3.7
+
 # SDKs oficiais dos provedores de IA
 openai~=3.24.0
 anthropic~=1.11.0
