@@ -49,8 +49,19 @@ class Command(BaseCommand):
         mock.ativo = True
         mock.save()
         modelo_demo = ModeloIA.objects.get(provedor=mock, identificador="mock-fisco")
-        semear_agentes(modelo_demo)
-        self.stdout.write("  MockProvider ativo; agentes vinculados ao modelo de demonstração.")
+        # Agentes já existentes mantêm o modelo escolhido pelo administrador; só os
+        # criados agora são vinculados ao modelo de demonstração.
+        criados = [
+            agente
+            for agente, criado in semear_agentes()
+            if criado and agente.modelo_id != modelo_demo.pk
+        ]
+        for agente in criados:
+            agente.modelo = modelo_demo
+            agente.save(update_fields=["modelo"])
+        self.stdout.write(
+            f"  MockProvider ativo; {len(criados)} agente(s) novo(s) vinculado(s) à demonstração."
+        )
 
         empresa, _ = Empresa.objects.get_or_create(cnpj=EMPRESA_DEMO["cnpj"], defaults=EMPRESA_DEMO)
         self.stdout.write(f"  Empresa fictícia: {empresa} ({empresa.cnpj_formatado})")

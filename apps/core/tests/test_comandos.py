@@ -11,7 +11,7 @@ from apps.agentes.models import Agente
 from apps.analises.services import sessao
 from apps.contas.perfis import eh_administrador, eh_procurador
 from apps.empresas.models import Empresa
-from apps.provedores.models import ProvedorIA, TipoProvedor
+from apps.provedores.models import ModeloIA, ProvedorIA, TipoProvedor
 
 
 @pytest.mark.django_db
@@ -26,6 +26,17 @@ def test_seed_demo_prepara_a_demonstracao():
     assert Agente.objects.selecionaveis().count() == 5
     assert set(Agente.objects.values_list("modelo__identificador", flat=True)) == {"mock-fisco"}
     assert Empresa.objects.get().cnpj_formatado == "45.723.174/0001-10"
+
+
+@pytest.mark.django_db
+def test_seed_demo_preserva_modelo_escolhido_pelo_administrador():
+    call_command("seed_demo")
+    agente = Agente.objects.get(slug="resumo-cronologico")
+    agente.modelo = ModeloIA.objects.get(identificador="gemini-3.8-flash")
+    agente.save()
+    call_command("seed_demo")  # reinício do contêiner
+    agente.refresh_from_db()
+    assert agente.modelo.identificador == "gemini-3.8-flash"
 
 
 def test_limpar_temporarios_remove_apenas_expirados():
