@@ -22,10 +22,11 @@ logger = logging.getLogger(__name__)
 
 # Falhas passageiras (sobrecarga do serviço ou limite por minuto) são repetidas
 # automaticamente, com espera exponencial entre as tentativas.
+# A cota gratuita é medida por minuto: as esperas (5, 10, 20, 40 s) cobrem essa janela.
 RETENTATIVAS = types.HttpRetryOptions(
-    attempts=4,
-    initial_delay=2.0,
-    max_delay=30.0,
+    attempts=5,
+    initial_delay=5.0,
+    max_delay=60.0,
     exp_base=2.0,
     http_status_codes=[429, 500, 502, 503, 504],
 )

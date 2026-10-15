@@ -7,6 +7,7 @@ do processo. Campos revisados pelo procurador prevalecem sobre a nova extração
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
@@ -16,13 +17,16 @@ from django.db import transaction
 from django.http import HttpRequest
 
 from apps.agentes.models import Agente
-from apps.analises.services import escopo, extracao
+from apps.analises.services import blocos, escopo, extracao
 from apps.analises.services.qualidade import QualidadeExtracao
 from apps.auditoria.services import Acao, Resultado, registrar
 from apps.core.json_ia import JSONInvalidoError, ler_objeto_json
+from apps.empresas import prompts
 from apps.empresas.models import Empresa, ExecucaoFiscal, Situacao
 from apps.provedores import services as ia
 from apps.provedores.llm import LLMError, Tarefa
+
+logger = logging.getLogger(__name__)
 
 SLUG_AGENTE_EXTRACAO = "extracao-estruturada"
 LIMITE_ITEM = 300
@@ -133,20 +137,75 @@ def agente_extracao() -> Agente:
     return agente
 
 
-def extrair_dados(agente: Agente, texto: str) -> DadosExecucao:
+def _extrair_bloco(agente: Agente, system_prompt: str, texto: str) -> dict[str, Any]:
     resposta = ia.gerar(
         agente.modelo,
-        agente.prompt,
+        system_prompt,
         texto,
         json=True,
         tarefa=Tarefa.EXTRACAO,
         agente=agente.slug,
     )
-    try:
-        dados = ler_objeto_json(resposta.texto)
-    except JSONInvalidoError as erro:
-        raise ConsolidacaoError("A extração estruturada não retornou um JSON válido.") from erro
-    return validar_dados(dados, extracao.detectar_numero_processo(texto))
+    return ler_objeto_json(resposta.texto)
+
+
+def extrair_dados(agente: Agente, texto: str) -> DadosExecucao:
+    """Extrai os dados da execução; autos que excedem o contexto do modelo são
+    processados em blocos, e os resultados parciais são combinados."""
+    numero_reserva = extracao.detectar_numero_processo(texto)
+    orcamento = blocos.orcamento_entrada(agente.modelo, agente.prompt + prompts.EXTRACAO_PARCIAL)
+    partes = blocos.dividir(texto, orcamento)
+
+    if len(partes) <= 1:
+        try:
+            dados = _extrair_bloco(agente, agente.prompt, texto)
+        except JSONInvalidoError as erro:
+            raise ConsolidacaoError("A extração estruturada não retornou um JSON válido.") from erro
+        return validar_dados(dados, numero_reserva)
+
+    parciais = []
+    for indice, parte in enumerate(partes, 1):
+        instrucao = prompts.EXTRACAO_PARCIAL.format(indice=indice, total=len(partes))
+        try:
+            dados = _extrair_bloco(agente, agente.prompt + instrucao, parte)
+        except JSONInvalidoError:
+            logger.warning("Bloco %d de %d sem JSON válido; ignorado.", indice, len(partes))
+            continue
+        parciais.append(validar_dados(dados, numero_reserva))
+    if not parciais:
+        raise ConsolidacaoError("A extração estruturada não retornou um JSON válido.")
+    return mesclar(parciais)
+
+
+def _unir(listas: list[list[Any]]) -> list[Any]:
+    vistos: list[Any] = []
+    for lista in listas:
+        vistos += [item for item in lista if item not in vistos]
+    return vistos[:LIMITE_ITENS]
+
+
+def mesclar(parciais: list[DadosExecucao]) -> DadosExecucao:
+    """Combina extrações de blocos consecutivos dos mesmos autos.
+
+    Listas são unidas sem repetição; número do processo e valor executado vêm do
+    primeiro bloco que os informar (petição inicial); a situação processual vem do
+    bloco mais recente que a descrever.
+    """
+    recentes = [p for p in parciais if p.situacao_detalhe] or parciais
+    ultimo = recentes[-1]
+    return DadosExecucao(
+        numero_processo=parciais[0].numero_processo,
+        cdas=_unir([p.cdas for p in parciais]),
+        valor_executado=next(
+            (p.valor_executado for p in parciais if p.valor_executado is not None), None
+        ),
+        bens_penhorados=_unir([p.bens_penhorados for p in parciais]),
+        apropriacoes=_unir([p.apropriacoes for p in parciais]),
+        teses_defesa=_unir([p.teses_defesa for p in parciais]),
+        situacao=ultimo.situacao,
+        situacao_detalhe=ultimo.situacao_detalhe,
+        acao_imediata=ultimo.acao_imediata,
+    )
 
 
 @transaction.atomic

@@ -231,3 +231,51 @@ def test_exportacao_csv_e_pdf(cliente_procurador, empresa):
         cliente_procurador.get(reverse("empresas:exportar", args=[empresa.pk, "xls"])).status_code
         == 404
     )
+
+
+# --- documentos que excedem o contexto do modelo --------------------------------------
+
+
+def test_mesclar_combina_blocos_dos_mesmos_autos():
+    inicio = consolidacao.DadosExecucao(
+        numero_processo=NUMERO, cdas=["CDA-1"], valor_executado=Decimal("100"),
+        teses_defesa=["Prescrição"], situacao=Situacao.CUMPRIMENTO, situacao_detalhe="Penhora",
+    )  # fmt: skip
+    meio = consolidacao.DadosExecucao(
+        numero_processo=NUMERO, cdas=["CDA-1", "CDA-2"], valor_executado=Decimal("999"),
+        apropriacoes=[{"descricao": "Valor", "protocolo_sefa": "2022/1"}],
+    )  # fmt: skip
+    fim = consolidacao.DadosExecucao(
+        numero_processo=NUMERO, teses_defesa=["Prescrição", "Nulidade da CDA"],
+        situacao=Situacao.SUSPENSO, situacao_detalhe="Art. 40", acao_imediata=True,
+    )  # fmt: skip
+    dados = consolidacao.mesclar([inicio, meio, fim])
+    assert dados.cdas == ["CDA-1", "CDA-2"]
+    assert dados.valor_executado == Decimal("100")  # o da petição inicial
+    assert dados.teses_defesa == ["Prescrição", "Nulidade da CDA"]
+    assert dados.apropriacoes == [{"descricao": "Valor", "protocolo_sefa": "2022/1"}]
+    assert (dados.situacao, dados.situacao_detalhe, dados.acao_imediata) == (
+        Situacao.SUSPENSO, "Art. 40", True,
+    )  # fmt: skip
+
+
+def test_extracao_divide_autos_extensos_em_blocos(agentes, monkeypatch):
+    from apps.provedores import services as ia
+
+    tarefas = []
+    original = ia.gerar
+
+    def espiao(modelo, system_prompt, user_content, **opts):
+        tarefas.append(opts.get("tarefa"))
+        return original(modelo, system_prompt, user_content, **opts)
+
+    monkeypatch.setattr(ia, "gerar", espiao)
+    folha = "\n".join(CABECALHO + MOVIMENTACOES)
+    texto = "\n\n".join(f"--- [fl. {i}] ---\n{folha}" for i in range(1, 41))
+    dados = consolidacao.extrair_dados(agentes["extracao-estruturada"], texto)
+
+    assert tarefas.count("extracao") > 1  # modelo de demonstração: contexto pequeno
+    assert dados.numero_processo == NUMERO
+    assert dados.cdas == ["20210001234-5"]
+    assert dados.valor_executado == Decimal("150000.00")
+    assert dados.situacao == Situacao.AGUARDANDO_MANIFESTACAO
