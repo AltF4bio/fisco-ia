@@ -35,8 +35,10 @@ class GeminiProvider(LLMProvider):
             max_output_tokens=opts.get("max_tokens", 16000),
             response_mime_type="application/json" if opts.get("json") else None,
         )
-        with _traduzir_erros():
-            resposta = self._cliente().models.generate_content(
+        # O cliente do google-genai se fecha ao ser descartado; ele precisa permanecer
+        # referenciado (bloco with) até a resposta ser totalmente recebida.
+        with _traduzir_erros(), self._cliente() as cliente:
+            resposta = cliente.models.generate_content(
                 model=model, contents=user_content, config=config
             )
         texto = resposta.text
@@ -52,8 +54,8 @@ class GeminiProvider(LLMProvider):
         )
 
     def testar_conexao(self) -> str:
-        with _traduzir_erros():
-            modelos = list(self._cliente().models.list())
+        with _traduzir_erros(), self._cliente() as cliente:
+            modelos = list(cliente.models.list())
         return f"Conexão estabelecida. {len(modelos)} modelos acessíveis com esta chave."
 
 

@@ -126,6 +126,7 @@ def test_anthropic_traduz_erro_de_conexao(monkeypatch):
 
 def test_gemini_usa_generate_content(monkeypatch):
     cliente = MagicMock()
+    cliente.__enter__.return_value = cliente  # usado em bloco with
     cliente.models.generate_content.return_value = SimpleNamespace(
         text='{"ok": true}',
         usage_metadata=SimpleNamespace(prompt_token_count=4, candidates_token_count=2),
@@ -232,3 +233,66 @@ def test_mock_perguntas_e_escopo():
     assert len(perguntas["perguntas"]) == 1
     escopo = json.loads(MockProvider().generate("s", AUTOS, "m", tarefa=Tarefa.ESCOPO).texto)
     assert escopo["execucao_fiscal"] is True
+
+
+# --- regressões ---------------------------------------------------------------------
+
+
+class _ClienteQueFechaAoSerDescartado:
+    """Imita o google-genai: o cliente se fecha no __del__, e os recursos (models)
+    não mantêm referência ao objeto Client."""
+
+    def __init__(self, **kwargs):
+        estado = {"fechado": False}
+        self._estado = estado
+
+        def verificar():
+            if estado["fechado"]:
+                raise RuntimeError("Cannot send a request, as the client has been closed.")
+
+        def listar():
+            verificar()
+            yield from ("modelo-a", "modelo-b")
+
+        def gerar(**kw):
+            verificar()
+            return SimpleNamespace(text="ok", usage_metadata=None)
+
+        self.models = SimpleNamespace(list=listar, generate_content=gerar)
+
+    def close(self):
+        self._estado["fechado"] = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def __del__(self):
+        self.close()
+
+
+def test_gemini_mantem_o_cliente_aberto_durante_a_chamada(monkeypatch):
+    from apps.provedores.llm import gemini_provider
+
+    monkeypatch.setattr(gemini_provider.genai, "Client", _ClienteQueFechaAoSerDescartado)
+    provedor = GeminiProvider(api_key="k")
+    assert "2 modelos" in provedor.testar_conexao()
+    assert provedor.generate("s", "u", "gemini-x").texto == "ok"
+
+
+def test_falha_inesperada_do_sdk_vira_mensagem_e_e_registrada(db, monkeypatch):
+    gemini = ProvedorIA.objects.get(tipo=TipoProvedor.GEMINI)
+    gemini.definir_chave("chave-gemini-123456")
+    gemini.save()
+
+    def explode(self):
+        raise RuntimeError("falha interna do SDK")
+
+    monkeypatch.setattr(GeminiProvider, "testar_conexao", explode)
+    sucesso, mensagem = services.testar_conexao(gemini)
+    assert not sucesso
+    assert "Falha inesperada" in mensagem and "RuntimeError" in mensagem
+    gemini.refresh_from_db()
+    assert gemini.ultimo_teste_ok is False

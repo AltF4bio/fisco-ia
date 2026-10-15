@@ -6,6 +6,9 @@ agente; a escolha do provedor concreto acontece somente aqui e na fábrica.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from django.conf import settings
@@ -14,6 +17,8 @@ from django.utils import timezone
 from apps.provedores.cripto import ChaveIndisponivelError
 from apps.provedores.llm import LLMError, LLMProvider, LLMResult, get_provider
 from apps.provedores.models import ModeloIA, ProvedorIA, TipoProvedor
+
+logger = logging.getLogger(__name__)
 
 
 def modo_demo() -> bool:
@@ -44,15 +49,33 @@ def provedor_para(modelo: ModeloIA) -> LLMProvider:
     return instanciar(modelo.provedor)
 
 
+@contextmanager
+def _falhas_inesperadas_como_llm_error(provedor: str) -> Iterator[None]:
+    """Converte falhas não previstas do SDK em ``LLMError``, para que o usuário
+    receba uma mensagem na tela em vez de um erro interno do servidor."""
+    try:
+        yield
+    except LLMError:
+        raise
+    except Exception as erro:
+        logger.exception("Falha inesperada no provedor %s", provedor)
+        raise LLMError(
+            f"Falha inesperada ao comunicar com o provedor ({type(erro).__name__})."
+        ) from erro
+
+
 def gerar(modelo: ModeloIA, system_prompt: str, user_content: str, **opts: Any) -> LLMResult:
     opts.setdefault("max_tokens", modelo.max_saida_tokens)
-    return provedor_para(modelo).generate(system_prompt, user_content, modelo.identificador, **opts)
+    provedor = provedor_para(modelo)
+    with _falhas_inesperadas_como_llm_error(provedor.nome):
+        return provedor.generate(system_prompt, user_content, modelo.identificador, **opts)
 
 
 def testar_conexao(provedor: ProvedorIA) -> tuple[bool, str]:
     """Testa as credenciais do provedor e registra o resultado no cadastro."""
     try:
-        mensagem = instanciar(provedor).testar_conexao()
+        with _falhas_inesperadas_como_llm_error(provedor.tipo):
+            mensagem = instanciar(provedor).testar_conexao()
         sucesso = True
     except LLMError as erro:
         mensagem, sucesso = str(erro), False
