@@ -296,3 +296,24 @@ def test_falha_inesperada_do_sdk_vira_mensagem_e_e_registrada(db, monkeypatch):
     assert "Falha inesperada" in mensagem and "RuntimeError" in mensagem
     gemini.refresh_from_db()
     assert gemini.ultimo_teste_ok is False
+
+
+def test_gemini_repete_automaticamente_falhas_passageiras():
+    opcoes = GeminiProvider(api_key="k")._cliente()._api_client._http_options.retry_options
+    assert opcoes.attempts >= 3
+    assert {429, 503} <= set(opcoes.http_status_codes)
+
+
+def test_gemini_sobrecarregado_gera_mensagem_clara(monkeypatch):
+    from google.genai import errors as gerrors
+
+    from apps.provedores.llm import LLMConexaoError
+
+    erro = gerrors.ServerError(503, {"error": {"code": 503, "message": "overloaded"}})
+    cliente = MagicMock()
+    cliente.__enter__.return_value = cliente
+    cliente.models.generate_content.side_effect = erro
+    provedor = GeminiProvider(api_key="k")
+    monkeypatch.setattr(provedor, "_cliente", lambda: cliente)
+    with pytest.raises(LLMConexaoError, match="temporariamente indisponível"):
+        provedor.generate("s", "u", "gemini-x")

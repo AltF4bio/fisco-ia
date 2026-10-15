@@ -67,6 +67,14 @@ def _falhas_inesperadas_como_llm_error(provedor: str) -> Iterator[None]:
 def gerar(modelo: ModeloIA, system_prompt: str, user_content: str, **opts: Any) -> LLMResult:
     opts.setdefault("max_tokens", modelo.max_saida_tokens)
     provedor = provedor_para(modelo)
+    # Somente metadados no log: tarefa, modelo e tamanho estimado (nunca o conteúdo).
+    logger.info(
+        "Chamada ao provedor %s/%s: tarefa=%s, ~%d tokens de entrada",
+        provedor.nome,
+        modelo.identificador,
+        opts.get("tarefa", "-"),
+        (len(system_prompt) + len(user_content)) // 4,
+    )
     with _falhas_inesperadas_como_llm_error(provedor.nome):
         return provedor.generate(system_prompt, user_content, modelo.identificador, **opts)
 
