@@ -93,6 +93,11 @@ def _traduzir_erros() -> Iterator[None]:
                 "Limite de uso do Gemini atingido mesmo após novas tentativas. Aguarde alguns "
                 "minutos; no nível gratuito, documentos extensos podem exceder a cota por minuto."
             ) from erro
+        if codigo == 404:
+            raise LLMError(
+                "O modelo configurado não está disponível para esta chave do Google (pode ter "
+                "sido descontinuado). Vincule os agentes a outro modelo do Gemini."
+            ) from erro
         raise LLMError(f"Erro retornado pelo Gemini (HTTP {codigo}).") from erro
     except errors.ServerError as erro:
         logger.warning("Gemini indisponível (HTTP %s): %s", getattr(erro, "code", None),

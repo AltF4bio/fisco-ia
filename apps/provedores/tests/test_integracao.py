@@ -317,3 +317,16 @@ def test_gemini_sobrecarregado_gera_mensagem_clara(monkeypatch):
     monkeypatch.setattr(provedor, "_cliente", lambda: cliente)
     with pytest.raises(LLMConexaoError, match="temporariamente indisponível"):
         provedor.generate("s", "u", "gemini-x")
+
+
+def test_gemini_modelo_indisponivel_gera_mensagem_clara(monkeypatch):
+    from google.genai import errors as gerrors
+
+    erro = gerrors.ClientError(404, {"error": {"code": 404, "message": "no longer available"}})
+    cliente = MagicMock()
+    cliente.__enter__.return_value = cliente
+    cliente.models.generate_content.side_effect = erro
+    provedor = GeminiProvider(api_key="k")
+    monkeypatch.setattr(provedor, "_cliente", lambda: cliente)
+    with pytest.raises(LLMError, match="não está disponível para esta chave"):
+        provedor.generate("s", "u", "gemini-antigo")
