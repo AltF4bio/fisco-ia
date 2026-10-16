@@ -20,7 +20,9 @@
 > deterministic mock provider for keyless demos. Compliance with Brazilian AI governance rules
 > for the Judiciary (CNJ Resolutions 332/2020 and 615/2025) and data protection law (LGPD) is
 > enforced as system behavior: human-in-the-loop, mandatory AI disclaimers, traceability and
-> data minimization. 124 automated tests, 93% coverage, CI on GitHub Actions.
+> data minimization. **Validated end to end with a real LLM (Google Gemini 3.6 Flash) on a
+> real public case**: all five analysis agents, structured extraction, PDF export and audit
+> trail. 132 automated tests, 93% coverage, CI on GitHub Actions.
 
 > [!IMPORTANT]
 > **Protótipo acadêmico — TCC de Sistemas de Informação, UNIPAR 2026.**
@@ -39,6 +41,7 @@
 - [Stack](#stack)
 - [Como executar](#como-executar)
 - [Modo demonstração × chaves reais](#modo-demonstração--chaves-reais)
+- [Validação com IA real](#validação-com-ia-real)
 - [Testes e qualidade](#testes-e-qualidade)
 - [Conformidade normativa](#conformidade-normativa)
 - [Requisitos do TCC → código](#requisitos-do-tcc--código)
@@ -301,6 +304,49 @@ agentes ao modelo desejado em **Agentes** (ou rode `python manage.py seed_agente
 e outros) foram conferidos na documentação oficial em outubro de 2026 e podem ser editados
 pela interface.
 
+> [!NOTE]
+> A disponibilidade dos modelos muda com frequência: um modelo pode aparecer na lista da conta e
+> ainda assim ser recusado, ou estar sobrecarregado. Se uma análise falhar com "modelo não
+> disponível" ou "sobrecarga", cadastre outro modelo em **Provedores** e vincule os agentes a
+> ele — nenhuma alteração de código é necessária.
+
+## Validação com IA real
+
+Em outubro de 2026 o sistema foi validado **de ponta a ponta com um modelo de IA generativa
+real** — Google Gemini (`gemini-3.6-flash`, nível gratuito da API) — usando os autos de um
+processo real de execução fiscal, de acesso público.
+
+| Etapa | Resultado com o modelo real |
+|---|---|
+| Teste de conexão | Chave validada (63 modelos acessíveis) |
+| Extração do PDF e índice de qualidade | Qualidade de extração de 100% |
+| Verificação de escopo | Documento reconhecido como execução fiscal |
+| Modo interativo | Executado; o modelo não identificou lacunas e a análise seguiu direto |
+| **Cinco agentes de análise** | Resumo cronológico, Síntese de decisões, Penhora e apropriação, Fundamentos jurídicos e Diagnóstico: **todos geraram análises** (~28 mil tokens de entrada cada) |
+| Extração estruturada | Linha da tabela consolidada criada (CDAs, valor executado, situação) |
+| Exportação e auditoria | Cinco PDFs exportados; todas as operações no log, somente com metadados |
+
+As análises foram conferidas pelo autor com os autos e estavam **corretas**. A troca entre
+modelos durante o teste foi feita **apenas por configuração**, comprovando na prática a
+independência de fornecedor da arquitetura.
+
+**Defeitos que só o teste real revelou** (todos corrigidos, com testes de regressão):
+- o cliente oficial do Gemini se fechava antes da requisição quando não ficava referenciado;
+- falhas passageiras do provedor (sobrecarga 503, cota 429) interrompiam a operação — agora há
+  novas tentativas automáticas com espera crescente;
+- a extração para a tabela enviava o processo inteiro de uma vez — agora divide autos extensos
+  em blocos e combina os resultados;
+- falhas inesperadas viravam erro interno sem mensagem — agora são explicadas na tela.
+
+Nenhum desses defeitos aparecia nos testes com o MockProvider, o que reforça que a simulação
+valida o fluxo, mas não substitui o teste com o provedor real.
+
+**Lições do nível gratuito:** a cota de entrada do Gemini gratuito é de 250 mil tokens por
+minuto por modelo, o que inviabiliza processos muito extensos; modelos recém-lançados ficaram
+sobrecarregados em vários momentos; e, nos termos do Google, o conteúdo enviado pelo nível
+gratuito pode ser usado para melhorar seus produtos. Por isso o teste usou apenas processo
+público, e o uso institucional pressupõe contratação paga com cláusulas de não treinamento.
+
 ## Testes e qualidade
 
 ```bash
@@ -308,7 +354,7 @@ ruff check . && ruff format --check .
 pytest --cov
 ```
 
-- **124 testes** e **93% de cobertura**, com os provedores de IA sempre simulados: permissões por
+- **132 testes** e **93% de cobertura**, com os provedores de IA sempre simulados: permissões por
   perfil, criptografia, troca de provedor e mapeamento de cada SDK, verificação de escopo,
   alerta de qualidade, modo interativo, map-reduce, upsert com revisão humana, conteúdo do log
   (garante que nenhum trecho dos autos é gravado), sanitização do HTML gerado e exportação em
@@ -363,8 +409,12 @@ artificial no Poder Judiciário, aplicadas aqui por analogia à advocacia públi
 ## Limitações e próximos passos
 
 **Limitações conhecidas**
-- **Não há avaliação com usuários reais.** A qualidade das análises com modelos reais ainda
-  precisa ser medida com procuradores e autos reais (anonimizados).
+- **Validação ainda restrita.** O teste com IA real usou um processo de porte reduzido,
+  avaliado pelo próprio autor. Falta medir a qualidade com procuradores e com uma amostra maior
+  de autos. A divisão em blocos (map-reduce) e a geração efetiva de perguntas de
+  esclarecimento ainda não foram observadas com um modelo real.
+- **Cotas do nível gratuito.** Processos extensos (centenas de milhares de tokens) excedem a
+  cota por minuto das APIs gratuitas; na prática exigem contratação paga.
 - **Sem OCR.** PDFs digitalizados geram apenas o alerta de baixa qualidade, sem reconhecimento
   do texto.
 - **Processamento síncrono.** A análise roda dentro da requisição HTTP, com timeout ampliado no
@@ -377,7 +427,8 @@ artificial no Poder Judiciário, aplicadas aqui por analogia à advocacia públi
   Para analisar com outro agente, é preciso reenviar o PDF.
 
 **Próximos passos**
-- Avaliação qualitativa com procuradores (precisão, utilidade, tempo economizado).
+- Avaliação qualitativa com procuradores (precisão, utilidade, tempo economizado) e
+  comparação entre modelos (Gemini, Claude e ChatGPT) sobre os mesmos autos.
 - OCR (ex.: Tesseract) para autos digitalizados.
 - Fila assíncrona (Celery/RQ) com acompanhamento do progresso.
 - Integração institucional: login único corporativo, implantação em infraestrutura da
