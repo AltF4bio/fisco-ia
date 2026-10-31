@@ -330,3 +330,46 @@ def test_gemini_modelo_indisponivel_gera_mensagem_clara(monkeypatch):
     monkeypatch.setattr(provedor, "_cliente", lambda: cliente)
     with pytest.raises(LLMError, match="não está disponível para esta chave"):
         provedor.generate("s", "u", "gemini-antigo")
+
+
+def _cliente_com_quedas(quedas: int):
+    """Dublê cuja conexão cai ``quedas`` vezes antes de responder."""
+    import httpx as httpx_original
+
+    estado = {"chamadas": 0}
+
+    def gerar(**kw):
+        estado["chamadas"] += 1
+        if estado["chamadas"] <= quedas:
+            raise httpx_original.RemoteProtocolError(
+                "Server disconnected without sending a response."
+            )
+        return SimpleNamespace(text="ok", usage_metadata=None)
+
+    cliente = MagicMock()
+    cliente.__enter__.return_value = cliente
+    cliente.models.generate_content.side_effect = gerar
+    return cliente, estado
+
+
+def test_gemini_repete_quando_a_conexao_cai(monkeypatch):
+    from apps.provedores.llm import gemini_provider
+
+    monkeypatch.setattr(gemini_provider, "ESPERA_CONEXAO", 0)
+    cliente, estado = _cliente_com_quedas(2)
+    provedor = GeminiProvider(api_key="k")
+    monkeypatch.setattr(provedor, "_cliente", lambda: cliente)
+    assert provedor.generate("s", "u", "gemini-x").texto == "ok"
+    assert estado["chamadas"] == 3
+
+
+def test_gemini_queda_persistente_gera_mensagem_clara(monkeypatch):
+    from apps.provedores.llm import LLMConexaoError, gemini_provider
+
+    monkeypatch.setattr(gemini_provider, "ESPERA_CONEXAO", 0)
+    cliente, estado = _cliente_com_quedas(99)
+    provedor = GeminiProvider(api_key="k")
+    monkeypatch.setattr(provedor, "_cliente", lambda: cliente)
+    with pytest.raises(LLMConexaoError, match="conexão com o Gemini foi interrompida"):
+        provedor.generate("s", "u", "gemini-x")
+    assert estado["chamadas"] == gemini_provider.TENTATIVAS_CONEXAO

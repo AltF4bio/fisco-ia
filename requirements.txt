@@ -18,6 +18,8 @@ nh3~=0.3.7
 openai~=3.24.0
 anthropic~=1.11.0
 google-genai~=2.28.0
+# Cliente HTTP usado pelo google-genai (tratamento de quedas de conexão)
+httpx~=0.28.1
 
 # Criptografia das chaves de API
 cryptography~=50.0.2

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
+import httpx
 from google import genai
 from google.genai import errors, types
 
@@ -31,6 +33,10 @@ RETENTATIVAS = types.HttpRetryOptions(
     http_status_codes=[429, 500, 502, 503, 504],
 )
 
+# Quedas de conexão sem resposta do servidor (falhas de transporte).
+TENTATIVAS_CONEXAO = 3
+ESPERA_CONEXAO = 3.0  # segundos; dobra a cada nova tentativa (3 s, 6 s)
+
 
 class GeminiProvider(LLMProvider):
     """Google Gemini via SDK google-genai."""
@@ -55,8 +61,10 @@ class GeminiProvider(LLMProvider):
         # O cliente do google-genai se fecha ao ser descartado; ele precisa permanecer
         # referenciado (bloco with) até a resposta ser totalmente recebida.
         with _traduzir_erros(), self._cliente() as cliente:
-            resposta = cliente.models.generate_content(
-                model=model, contents=user_content, config=config
+            resposta = _repetir_em_queda_de_conexao(
+                lambda: cliente.models.generate_content(
+                    model=model, contents=user_content, config=config
+                )
             )
         texto = resposta.text
         if texto is None:
@@ -72,8 +80,29 @@ class GeminiProvider(LLMProvider):
 
     def testar_conexao(self) -> str:
         with _traduzir_erros(), self._cliente() as cliente:
-            modelos = list(cliente.models.list())
+            modelos = _repetir_em_queda_de_conexao(lambda: list(cliente.models.list()))
         return f"Conexão estabelecida. {len(modelos)} modelos acessíveis com esta chave."
+
+
+def _repetir_em_queda_de_conexao[T](chamada: Callable[[], T]) -> T:
+    """Repete a chamada quando a conexão cai sem resposta do servidor.
+
+    As novas tentativas do SDK cobrem respostas HTTP de erro (429/5xx), mas não
+    falhas de transporte, como "Server disconnected without sending a response".
+    """
+    for tentativa in range(1, TENTATIVAS_CONEXAO + 1):
+        try:
+            return chamada()
+        except httpx.TransportError as erro:
+            if tentativa == TENTATIVAS_CONEXAO:
+                raise
+            espera = ESPERA_CONEXAO * 2 ** (tentativa - 1)
+            logger.warning(
+                "Conexão com o Gemini interrompida (%s); nova tentativa %d de %d em %.0f s.",
+                type(erro).__name__, tentativa + 1, TENTATIVAS_CONEXAO, espera,
+            )  # fmt: skip
+            time.sleep(espera)
+    raise AssertionError("inalcançável")
 
 
 @contextmanager
@@ -108,5 +137,11 @@ def _traduzir_erros() -> Iterator[None]:
         ) from erro
     except errors.APIError as erro:
         raise LLMError("Erro no serviço do Gemini.") from erro
+    except httpx.TransportError as erro:
+        logger.warning("Conexão com o Gemini falhou: %s", erro)
+        raise LLMConexaoError(
+            "A conexão com o Gemini foi interrompida, mesmo após novas tentativas. "
+            "Tente novamente em alguns instantes."
+        ) from erro
     except (OSError, TimeoutError) as erro:
         raise LLMConexaoError("Não foi possível conectar ao Gemini.") from erro
